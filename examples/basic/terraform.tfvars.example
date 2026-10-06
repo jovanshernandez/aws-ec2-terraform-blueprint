@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars and adjust. terraform.tfvars is gitignored.
+aws_region        = "us-east-1"
+aws_profile       = "my-deploy-profile"
+project           = "ec2-blueprint"
+environment       = "dev"
+name              = "blueprint-web"
+instance_type     = "t4g.micro"
+http_ingress_cidr = "203.0.113.0/24"

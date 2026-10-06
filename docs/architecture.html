@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ec2-instance module architecture</title>
+<!-- Source for docs/images/architecture.png. Render at 1240x720. -->
+<style>
+  html, body { margin: 0; background: #ffffff; }
+  svg { display: block; font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .title { font-size: 15px; font-weight: 600; fill: #1f2328; }
+  .label { font-size: 13px; fill: #1f2328; }
+  .sub { font-size: 12px; fill: #57606a; }
+  .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 11.5px; fill: #57606a; }
+  .tag { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .edge { font-size: 12px; fill: #57606a; }
+</style>
+</head>
+<body>
+<svg width="1240" height="720" viewBox="0 0 1240 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <!-- Operator -->
+  <rect x="880" y="18" width="320" height="64" rx="8" fill="#f6f8fa" stroke="#8c959f"/>
+  <text x="900" y="44" class="title">Operator</text>
+  <text x="900" y="66" class="mono">aws ssm start-session --target i-...</text>
+
+  <!-- Internet clients -->
+  <rect x="24" y="310" width="222" height="88" rx="8" fill="#f6f8fa" stroke="#8c959f"/>
+  <text x="44" y="338" class="title">Internet clients</text>
+  <text x="44" y="360" class="sub">e.g. HTTP 80, only when</text>
+  <text x="44" y="378" class="sub">ingress_rules allows it</text>
+
+  <!-- Region -->
+  <rect x="270" y="110" width="950" height="590" rx="12" fill="#fffaf2" stroke="#d4a72c" stroke-width="1.5"/>
+  <text x="290" y="138" class="tag" fill="#9a6700">AWS region</text>
+
+  <!-- VPC -->
+  <rect x="296" y="156" width="500" height="520" rx="10" fill="#f3f8ff" stroke="#54aeff" stroke-width="1.5"/>
+  <text x="316" y="182" class="tag" fill="#0969da">VPC</text>
+
+  <!-- Subnet -->
+  <rect x="322" y="198" width="448" height="456" rx="8" fill="#ffffff" stroke="#80ccff"/>
+  <text x="340" y="222" class="tag" fill="#0969da">Subnet (subnet_id)</text>
+
+  <!-- Security group -->
+  <rect x="348" y="240" width="396" height="290" rx="8" fill="none" stroke="#cf222e" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="364" y="262" class="tag" fill="#cf222e">Security group</text>
+  <text x="364" y="280" class="sub">No inbound rules by default. SSH only from listed non-/0 CIDRs.</text>
+
+  <!-- Instance -->
+  <rect x="376" y="296" width="340" height="120" rx="8" fill="#ffffff" stroke="#1f2328" stroke-width="1.5"/>
+  <text x="396" y="324" class="title">EC2 instance</text>
+  <text x="396" y="348" class="label">Amazon Linux 2023, arm64, t4g.micro</text>
+  <text x="396" y="370" class="sub">IMDSv2 required, hop limit 1</text>
+  <text x="396" y="392" class="sub">No key pair, optional user_data</text>
+
+  <!-- EBS -->
+  <rect x="376" y="436" width="340" height="74" rx="8" fill="#ffffff" stroke="#1f2328"/>
+  <text x="396" y="464" class="title">Root EBS volume</text>
+  <text x="396" y="488" class="sub">gp3, encrypted (default key or KMS key)</text>
+  <line x1="546" y1="416" x2="546" y2="436" stroke="#1f2328"/>
+
+  <!-- EIP -->
+  <rect x="348" y="566" width="396" height="62" rx="31" fill="#ffffff" stroke="#8c959f" stroke-dasharray="4 3"/>
+  <text x="372" y="593" class="title">Elastic IP</text>
+  <text x="372" y="613" class="sub">optional: create_eip = true</text>
+  <line x1="546" y1="566" x2="546" y2="530" stroke="#8c959f" stroke-dasharray="4 3"/>
+
+  <!-- Session Manager -->
+  <rect x="880" y="160" width="320" height="86" rx="8" fill="#ffffff" stroke="#1f2328"/>
+  <text x="900" y="188" class="title">Systems Manager</text>
+  <text x="900" y="210" class="label">Session Manager</text>
+  <text x="900" y="230" class="sub">shell access, audited, no open port</text>
+
+  <!-- IAM -->
+  <rect x="880" y="300" width="320" height="104" rx="8" fill="#ffffff" stroke="#1f2328"/>
+  <text x="900" y="328" class="title">IAM role + instance profile</text>
+  <text x="900" y="350" class="sub">trusted by ec2.amazonaws.com only</text>
+  <text x="900" y="372" class="mono">AmazonSSMManagedInstanceCore</text>
+  <text x="900" y="392" class="sub">+ additional_iam_policy_arns</text>
+
+  <!-- Parameter Store -->
+  <rect x="880" y="460" width="320" height="104" rx="8" fill="#ffffff" stroke="#1f2328"/>
+  <text x="900" y="488" class="title">SSM Parameter Store (public)</text>
+  <text x="900" y="510" class="mono">/aws/service/ami-amazon-linux-latest/</text>
+  <text x="900" y="528" class="mono">al2023-ami-kernel-default-arm64</text>
+  <text x="900" y="550" class="sub">read at plan time unless ami_id is set</text>
+
+  <!-- Edges -->
+  <line x1="1040" y1="82" x2="1040" y2="158" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="1050" y="125" class="edge">start-session</text>
+
+  <path d="M716,318 L846,318 L846,203 L878,203" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="838" y="304" class="edge" transform="rotate(-90 838 304)">HTTPS 443 out</text>
+
+  <path d="M878,352 L716,352" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="804" y="344" class="edge">profile</text>
+
+  <path d="M878,512 L846,512 L846,396 L716,396" fill="none" stroke="#57606a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <text x="838" y="490" class="edge" transform="rotate(-90 838 490)">AMI ID</text>
+
+  <path d="M246,354 L374,354" fill="none" stroke="#57606a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+</svg>
+</body>
+</html>
